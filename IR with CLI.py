@@ -12,12 +12,12 @@ stemmer = PorterStemmer()
 stop_words = set(stopwords.words('english'))
 
 
-def read_documents_from_directory(directory):
+def read_documents_from_directory(dir):
     documents = {}
-    for filename in os.listdir(directory):
+    for filename in os.listdir(dir):
         if filename.endswith(".txt"):
-            with open(os.path.join(directory, filename), 'r', encoding='utf-8') as file:
-                doc_id = filename  # use the filename as the document ID
+            with open(os.path.join(dir, filename), 'r', encoding='utf-8') as file:
+                doc_id = filename 
                 documents[doc_id] = file.read()
     return documents
 
