@@ -67,7 +67,7 @@ def main():
     print("Ranked documents:")
     for idx in ranked_indices:
         
-        print(f"Document: {filenames[idx]}, Similarity: {similarities[idx]:.4f}")
+        print(f"Doc.: {filenames[idx]}, Similarity: {similarities[idx]:.4f}")
 
 if __name__ == "__main__":
     main()

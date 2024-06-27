@@ -1,0 +1,1 @@
+C++ is a powerful, versatile programming language developed from C, featuring object-oriented programming and low-level memory manipulation capabilities. It is widely used for system software, game development, and performance-critical applications due to its efficiency and extensive standard library.
