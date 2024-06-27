@@ -118,11 +118,11 @@ tfidf_index = calculate_tfidf(tf_index, idf)
 doc_vectors, vocab = create_document_vectors(tfidf_index, idf)
 
 # Example query
-query = "information retrieval"
+query = input("Enter your query: ")
 query_vector = preprocess_query(query, idf)
 ranked_docs = rank_documents(query_vector, doc_vectors)
 
 # Print the ranked documents with similarity values
-print(f"Ranked documents for '{query}':")
+print(f"Ranked documents for your '{query}':")
 for doc_id, sim in ranked_docs:
     print(f"Doc: {doc_id}, Similarity: {sim:.4f}")
