@@ -15,15 +15,15 @@ stemmer = PorterStemmer()
 stop_words = set(stopwords.words('english'))
 
 def preprocess_text(text):
-    # Lowercasing
+    
     text = text.lower()
-    # Removing punctuation
+    
     text = text.translate(str.maketrans('', '', string.punctuation))
-    # Tokenization
+    
     tokens = word_tokenize(text)
-    # Stopword removal and stemming
+    
     processed_tokens = [stemmer.stem(word) for word in tokens if word not in stop_words]
-    # Join tokens back into a single string
+    
     return ' '.join(processed_tokens)
 
 def read_documents_from_directory(directory_path):
@@ -49,19 +49,16 @@ def rank_documents(tfidf_matrix):
     return ranked_indices, cosine_similarities
 
 def process_query(query, directory_path):
-    # Read documents from the specified directory
+   
     documents, filenames = read_documents_from_directory(directory_path)
 
-    # Preprocess the query
     query = preprocess_text(query)
 
-    # Vectorize the documents and the query
     tfidf_matrix = vectorize_documents(documents, query)
 
-    # Rank the documents based on their similarity to the query
+
     ranked_indices, similarities = rank_documents(tfidf_matrix)
 
-    # Return the ranked documents and their filenames
     ranked_documents = [(filenames[idx], similarities[idx]) for idx in ranked_indices]
     return ranked_documents
 
@@ -87,11 +84,11 @@ def process_query_and_display():
     except Exception as e:
         messagebox.showerror("Error", str(e))
 
-# Create the main window
-root = tk.Tk()
-root.title("Vector Space Model")
 
-# Create and pack widgets
+root = tk.Tk()
+root.title("ASTU IR-project")
+
+
 query_label = tk.Label(root, text="Enter query:")
 query_label.grid(row=0, column=0, sticky="w", padx=5, pady=5)
 

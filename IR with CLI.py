@@ -8,11 +8,10 @@ import numpy as np
 import os
 
 
-# Initialize the stemmer and stop words
 stemmer = PorterStemmer()
 stop_words = set(stopwords.words('english'))
 
-# Read documents from text files
+
 def read_documents_from_directory(directory):
     documents = {}
     for filename in os.listdir(directory):
@@ -22,13 +21,13 @@ def read_documents_from_directory(directory):
                 documents[doc_id] = file.read()
     return documents
 
-# Preprocess text (stem and remove stop words)
+
 def preprocess(text):
     terms = re.findall(r'\w+', text.lower())
     processed_terms = [stemmer.stem(term) for term in terms if term not in stop_words]
     return processed_terms
 
-# Create term frequency (TF) index
+
 def create_tf_index(documents):
     tf_index = defaultdict(lambda: defaultdict(int))
     for doc_id, text in documents.items():
@@ -37,7 +36,7 @@ def create_tf_index(documents):
             tf_index[doc_id][term] += 1
     return tf_index
 
-# Calculate inverse document frequency (IDF)
+
 def calculate_idf(tf_index, total_docs):
     df = defaultdict(int)
     idf = {}
@@ -51,7 +50,7 @@ def calculate_idf(tf_index, total_docs):
     
     return idf
 
-# Calculate TF-IDF scores
+
 def calculate_tfidf(tf_index, idf):
     tfidf_index = defaultdict(lambda: defaultdict(float))
     
@@ -61,7 +60,7 @@ def calculate_tfidf(tf_index, idf):
     
     return tfidf_index
 
-# Create the document vectors
+
 def create_document_vectors(tfidf_index, idf):
     vocab = list(idf.keys())
     doc_vectors = defaultdict(lambda: np.zeros(len(vocab)))
@@ -73,7 +72,7 @@ def create_document_vectors(tfidf_index, idf):
     
     return doc_vectors, vocab
 
-# Preprocess the query
+
 def preprocess_query(query, idf):
     terms = preprocess(query)
     query_vector = np.zeros(len(idf))
@@ -85,7 +84,7 @@ def preprocess_query(query, idf):
     
     return query_vector
 
-# Calculate cosine similarity
+
 def cosine_similarity(vec1, vec2):
     dot_product = np.dot(vec1, vec2)
     norm_vec1 = np.linalg.norm(vec1)
@@ -96,7 +95,7 @@ def cosine_similarity(vec1, vec2):
     
     return dot_product / (norm_vec1 * norm_vec2)
 
-# Rank the documents based on similarity
+
 def rank_documents(query_vector, doc_vectors):
     similarities = []
     
@@ -107,9 +106,9 @@ def rank_documents(query_vector, doc_vectors):
     ranked_docs = sorted(similarities, key=lambda x: x[1], reverse=True)
     return ranked_docs
 
-# Read and process documents from directory
-directory = 'C:\\Users\\hp\\Desktop\\IR Project'  # Change this to your directory path
-documents = read_documents_from_directory(directory)
+
+dir = 'C:\\Users\\hp\\Desktop\\IR Project\\Doc-Corpus\\'  
+documents = read_documents_from_directory(dir)
 
 # Full text retrieval process
 tf_index = create_tf_index(documents)
@@ -117,12 +116,12 @@ idf = calculate_idf(tf_index, len(documents))
 tfidf_index = calculate_tfidf(tf_index, idf)
 doc_vectors, vocab = create_document_vectors(tfidf_index, idf)
 
-# Example query
+
 query = input("Enter your query: ")
 query_vector = preprocess_query(query, idf)
 ranked_docs = rank_documents(query_vector, doc_vectors)
 
-# Print the ranked documents with similarity values
+
 print(f"Ranked documents for your '{query}':")
 for doc_id, sim in ranked_docs:
     print(f"Doc: {doc_id}, Similarity: {sim:.4f}")
