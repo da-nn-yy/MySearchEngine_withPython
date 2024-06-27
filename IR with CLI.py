@@ -125,3 +125,4 @@ ranked_docs = rank_documents(query_vector, doc_vectors)
 print(f"Ranked documents for your '{query}':")
 for doc_id, sim in ranked_docs:
     print(f"Doc: {doc_id}, Similarity: {sim:.4f}")
+

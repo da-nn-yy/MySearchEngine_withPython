@@ -1,116 +1,159 @@
-import os
-import string
-import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-import nltk
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-from nltk.stem import PorterStemmer
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import scrolledtext
+import os
+from collections import defaultdict
+import re
+import nltk
+from nltk.stem import PorterStemmer
+from nltk.corpus import stopwords
+import math
+import numpy as np
 
-# Initialize the stemmer
+
 stemmer = PorterStemmer()
 stop_words = set(stopwords.words('english'))
 
-def preprocess_text(text):
-    
-    text = text.lower()
-    
-    text = text.translate(str.maketrans('', '', string.punctuation))
-    
-    tokens = word_tokenize(text)
-    
-    processed_tokens = [stemmer.stem(word) for word in tokens if word not in stop_words]
-    
-    return ' '.join(processed_tokens)
-
-def read_documents_from_directory(directory_path):
-    documents = []
-    filenames = []
-    for filename in os.listdir(directory_path):
+def read_documents_from_directory(directory):
+    documents = {}
+    for filename in os.listdir(directory):
         if filename.endswith(".txt"):
-            with open(os.path.join(directory_path, filename), 'r', encoding='utf-8') as file:
-                text = file.read()
-                processed_text = preprocess_text(text)
-                documents.append(processed_text)
-                filenames.append(filename)
-    return documents, filenames
+            with open(os.path.join(directory, filename), 'r', encoding='utf-8') as file:
+                doc_id = filename  # use the filename as the document ID
+                documents[doc_id] = file.read()
+    return documents
 
-def vectorize_documents(documents, query):
-    vectorizer = TfidfVectorizer()
-    tfidf_matrix = vectorizer.fit_transform(documents + [query])
-    return tfidf_matrix
+def preprocess(text):
+    terms = re.findall(r'\w+', text.lower())
+    processed_terms = [stemmer.stem(term) for term in terms if term not in stop_words]
+    return processed_terms
 
-def rank_documents(tfidf_matrix):
-    cosine_similarities = cosine_similarity(tfidf_matrix[-1], tfidf_matrix[:-1]).flatten()
-    ranked_indices = np.argsort(cosine_similarities)[::-1]
-    return ranked_indices, cosine_similarities
+def create_tf_index(documents):
+    tf_index = defaultdict(lambda: defaultdict(int))
+    for doc_id, text in documents.items():
+        terms = preprocess(text)
+        for term in terms:
+            tf_index[doc_id][term] += 1
+    return tf_index
 
-def process_query(query, directory_path):
-   
-    documents, filenames = read_documents_from_directory(directory_path)
+def calculate_idf(tf_index, total_docs):
+    df = defaultdict(int)
+    idf = {}
+    
+    for doc_id, term_freqs in tf_index.items():
+        for term in term_freqs:
+            df[term] += 1
+    
+    for term, doc_count in df.items():
+        idf[term] = math.log(total_docs / float(doc_count))
+    
+    return idf
 
-    query = preprocess_text(query)
+def calculate_tfidf(tf_index, idf):
+    tfidf_index = defaultdict(lambda: defaultdict(float))
+    
+    for doc_id, term_freqs in tf_index.items():
+        for term, freq in term_freqs.items():
+            tfidf_index[doc_id][term] = freq * idf[term]
+    
+    return tfidf_index
 
-    tfidf_matrix = vectorize_documents(documents, query)
+def create_document_vectors(tfidf_index, idf):
+    vocab = list(idf.keys())
+    doc_vectors = defaultdict(lambda: np.zeros(len(vocab)))
+    
+    for doc_id, term_scores in tfidf_index.items():
+        for term, score in term_scores.items():
+            term_index = vocab.index(term)
+            doc_vectors[doc_id][term_index] = score
+    
+    return doc_vectors, vocab
 
+def preprocess_query(query, idf):
+    terms = preprocess(query)
+    query_vector = np.zeros(len(idf))
+    
+    for term in terms:
+        if term in idf:
+            term_index = list(idf.keys()).index(term)
+            query_vector[term_index] += 1
+    
+    return query_vector
 
-    ranked_indices, similarities = rank_documents(tfidf_matrix)
+def cosine_similarity(vec1, vec2):
+    dot_product = np.dot(vec1, vec2)
+    norm_vec1 = np.linalg.norm(vec1)
+    norm_vec2 = np.linalg.norm(vec2)
+    
+    if norm_vec1 == 0 or norm_vec2 == 0:
+        return 0.0
+    
+    return dot_product / (norm_vec1 * norm_vec2)
 
-    ranked_documents = [(filenames[idx], similarities[idx]) for idx in ranked_indices]
-    return ranked_documents
+def rank_documents(query_vector, doc_vectors):
+    similarities = []
+    
+    for doc_id, doc_vector in doc_vectors.items():
+        sim = cosine_similarity(query_vector, doc_vector)
+        similarities.append((doc_id, sim))
+    
+    ranked_docs = sorted(similarities, key=lambda x: x[1], reverse=True)
+    return ranked_docs
 
-def browse_directory():
-    directory_path = filedialog.askdirectory()
-    if directory_path:
-        directory_entry.delete(0, tk.END)
-        directory_entry.insert(0, directory_path)
+def retrieve_documents(query, documents_dir):
+    documents = read_documents_from_directory(documents_dir)
+    tf_index = create_tf_index(documents)
+    idf = calculate_idf(tf_index, len(documents))
+    tfidf_index = calculate_tfidf(tf_index, idf)
+    doc_vectors, vocab = create_document_vectors(tfidf_index, idf)
+    query_vector = preprocess_query(query, idf)
+    ranked_docs = rank_documents(query_vector, doc_vectors)
+    return ranked_docs
 
-def process_query_and_display():
-    query = query_entry.get().strip()
-    directory_path = directory_entry.get().strip()
-    if not query or not directory_path:
-        messagebox.showerror("Error", "Please enter a query and select a directory.")
-        return
-    try:
-        ranked_documents = process_query(query, directory_path)
-        result_text.config(state=tk.NORMAL)
-        result_text.delete(1.0, tk.END)
-        for idx, (filename, similarity) in enumerate(ranked_documents, start=1):
-            result_text.insert(tk.END, f"{idx}. Document: {filename}, Similarity: {similarity:.4f}\n")
-        result_text.config(state=tk.DISABLED)
-    except Exception as e:
-        messagebox.showerror("Error", str(e))
+class SimpleIRApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("ASTU IR-PROJECT")
+        
+        self.create_widgets()
+    
+    def create_widgets(self):
+       
+        self.label_query = tk.Label(self.root, text="Enter your query:")
+        self.label_query.pack(pady=10)
+        
+        self.entry_query = tk.Entry(self.root, width=50)
+        self.entry_query.pack(pady=5)
+        
 
+        self.label_results = tk.Label(self.root, text="Search Results:")
+        self.label_results.pack(pady=10)
+        
+        self.text_results = scrolledtext.ScrolledText(self.root, width=70, height=20, wrap=tk.WORD)
+        self.text_results.pack(pady=10)
+  
+        self.button_search = tk.Button(self.root, text="Search", command=self.perform_search)
+        self.button_search.pack(pady=10)
+        
+        
+        self.button_quit = tk.Button(self.root, text="Quit", command=self.root.quit)
+        self.button_quit.pack(pady=5)
+    
+    def perform_search(self):
+        query = self.entry_query.get()
+        ranked_docs = retrieve_documents(query, 'C:\\Users\\hp\\Desktop\\IR Project\\Doc-Corpus\\')
+        
+        self.text_results.delete(1.0, tk.END)
+        if ranked_docs:
+            for rank, (doc_id, similarity) in enumerate(ranked_docs, start=1):
+                self.text_results.insert(tk.END, f"Rank {rank}: Doc ID: {doc_id}, Similarity: {similarity:.4f}\n")
+        else:
+            self.text_results.insert(tk.END, "No documents found.\n")
 
-root = tk.Tk()
-root.title("ASTU IR-project")
+#
+def main():
+    root = tk.Tk()
+    app = SimpleIRApp(root)
+    root.mainloop()
 
-
-query_label = tk.Label(root, text="Enter query:")
-query_label.grid(row=0, column=0, sticky="w", padx=5, pady=5)
-
-query_entry = tk.Entry(root, width=50)
-query_entry.grid(row=0, column=1, padx=5, pady=5)
-
-directory_label = tk.Label(root, text="Select directory:")
-directory_label.grid(row=1, column=0, sticky="w", padx=5, pady=5)
-
-directory_entry = tk.Entry(root, width=50)
-directory_entry.grid(row=1, column=1, padx=5, pady=5)
-
-browse_button = tk.Button(root, text="Browse", command=browse_directory)
-browse_button.grid(row=1, column=2, padx=5, pady=5)
-
-process_button = tk.Button(root, text="Process Query", command=process_query_and_display)
-process_button.grid(row=2, column=0, columnspan=3, pady=5)
-
-result_label = tk.Label(root, text="Ranked Documents:")
-result_label.grid(row=3, column=0, sticky="w", padx=5, pady=5)
-
-result_text = tk.Text(root, width=80, height=20, wrap="word", state=tk.DISABLED)
-result_text.grid(row=4, column=0, columnspan=3, padx=5, pady=5)
-
-root.mainloop()
+if __name__ == "__main__":
+    main()
