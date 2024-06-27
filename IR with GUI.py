@@ -124,6 +124,9 @@ class SimpleIRApp:
         self.entry_query = tk.Entry(self.root, width=50)
         self.entry_query.pack(pady=5)
         
+        self.button_search = tk.Button(self.root, text="Search", command=self.perform_search)
+        self.button_search.pack(pady=10)
+
 
         self.label_results = tk.Label(self.root, text="Search Results:")
         self.label_results.pack(pady=10)
@@ -131,10 +134,6 @@ class SimpleIRApp:
         self.text_results = scrolledtext.ScrolledText(self.root, width=70, height=20, wrap=tk.WORD)
         self.text_results.pack(pady=10)
   
-        self.button_search = tk.Button(self.root, text="Search", command=self.perform_search)
-        self.button_search.pack(pady=10)
-        
-        
         self.button_quit = tk.Button(self.root, text="Quit", command=self.root.quit)
         self.button_quit.pack(pady=5)
     
