@@ -7,8 +7,6 @@ import math
 import numpy as np
 import os
 
-# Download required NLTK data
-nltk.download('stopwords')
 
 # Initialize the stemmer and stop words
 stemmer = PorterStemmer()
@@ -58,7 +56,7 @@ def calculate_tfidf(tf_index, idf):
     tfidf_index = defaultdict(lambda: defaultdict(float))
     
     for doc_id, term_freqs in tf_index.items():
-        for term, freq in term_freqs:
+        for term, freq in term_freqs.items():
             tfidf_index[doc_id][term] = freq * idf[term]
     
     return tfidf_index
@@ -127,4 +125,4 @@ ranked_docs = rank_documents(query_vector, doc_vectors)
 # Print the ranked documents with similarity values
 print(f"Ranked documents for '{query}':")
 for doc_id, sim in ranked_docs:
-    print(f"Document: {doc_id}, Similarity: {sim:.4f}")
+    print(f"Doc: {doc_id}, Similarity: {sim:.4f}")
